@@ -34,7 +34,7 @@ char *strcasestr(const char *haystack, const char *needle) {
     return NULL;
 }
 
-char *strstr_w_option(const char *haystack, const char *needle, int option) {
+char *strstr_w_option(const char *haystack, const char *needle, flags option) {
     if (option & CASE) {
         return strcasestr(haystack, needle);
     } else {
