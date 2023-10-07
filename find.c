@@ -34,29 +34,6 @@ char *strcasestr(const char *haystack, const char *needle) {
     return NULL;
 }
 
-static char *strstr_fully_matched(char *haystack, char *needle) {
-    char *rv;
-    char padded_needle[strlen(needle) + 3];
-    padded_needle[0] = ' ';
-    strcpy(padded_needle + 1, needle);
-    padded_needle[strlen(needle) + 1] = ' ';
-    padded_needle[strlen(needle) + 2] = '\0'; // pad the needle w/ spaces before and after
-    if(!strcmp(needle, haystack))
-        return haystack; // needle matches the whole haystack
-    if (!strncmp(haystack, padded_needle + 1, strlen(needle) + 1)) {
-        return haystack; // needle is at the beginning of haystack
-    }
-    if ((rv = strstr(haystack, padded_needle)) != NULL) {
-        return rv + 1; // needle is at the middle of haystack.
-    }
-    padded_needle[strlen(needle) + 1] = '\0'; // remove the last space
-    if ((rv = strstr(haystack, padded_needle)) != NULL &&
-        rv[strlen(padded_needle)] == '\0') {
-        return rv + 1; // needle is at the end of haystack.
-    }
-    return NULL;
-}
-
 char *strstr_w_option(const char *haystack, const char *needle, flags option) {
     if (option & CASE) {
         return strcasestr(haystack, needle);
@@ -154,14 +131,17 @@ int main(int argc, char **argv) {
     for (int i = start; i != end; i += step) {
         if (option & NUMBERED)
             sprintf(initial, "%d. ", i + 1);
+        else
+            initial[0] = '\0';  // Reset the initial string if not numbering
+
         char *first_occurrence = strstr_w_option(lineptr[i], pattern, option);
         if (((option & EXCEPT) != 0) != (first_occurrence != NULL)) {
             if (option & PARTIAL) {
                 int index = first_occurrence - lineptr[i];
                 if (index > 10) {
-                    printf("%.10s...", lineptr[i]);
+                    printf("%s%.10s...", initial, lineptr[i]);
                 } else {
-                    printf("%.*s", index, lineptr[i]);
+                    printf("%s%.*s", initial, index, lineptr[i]);
                 }
                 printf("%s", pattern);
                 if (strlen(lineptr[i]) - index - strlen(pattern) > 5) {
@@ -171,7 +151,7 @@ int main(int argc, char **argv) {
                 }
             } else if (option & FIRST) {
                 int index = first_occurrence - lineptr[i];
-                printf("@%d: %s\n", index + 1, lineptr[i]);
+                printf("%s@%d: %s\n", initial, index + 1, lineptr[i]);
             } else {
                 printf("%s%s\n", initial, lineptr[i]);
             }
