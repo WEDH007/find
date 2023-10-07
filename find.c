@@ -113,12 +113,12 @@ int main(int argc, char **argv) {
 
     if (option & SORTED) {
         qsort(lineptr, line_count, sizeof(char *), compare);
-    } else if (option & REVERSE) {
+    } else if (option & REVERSE && !(option & SORTED)) {
         qsort(lineptr, line_count, sizeof(char *), reverse_compare);
     }
 
     int start = 0, end = line_count, step = 1;
-    if (option & REVERSE) {
+    if (option & REVERSE && !(option & SORTED)) {
         start = line_count - 1;
         end = -1;
         step = -1;
