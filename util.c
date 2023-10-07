@@ -30,7 +30,8 @@ static void to_lower(char* input){
 }
 //this function finds an occurrence of needle in haystack
 //option specify case-sensitivity of search and whether needle should match a whole word
-char* strstr_w_option(char* haystack, char* needle, flags option){
+char* strstr_w_option(const char* haystack, const char* needle, flags option){
+
 	if(option & CASE){
 		to_lower(haystack = strdup(haystack));
 		to_lower(needle = strdup(needle));
