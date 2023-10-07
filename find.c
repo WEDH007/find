@@ -1,85 +1,55 @@
 #include "find.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 
-char *lineptr[MAX_LINES];
+#define NUMBERED 0x01
+#define EXCEPT   0x02
+#define SORTED   0x04
+#define REVERSE  0x08
+#define MATCH    0x10
+#define CASE     0x20
+#define FIRST    0x40
+#define PARTIAL  0x80
 
-int readlines() {
-    int len, nlines;
-    char *p, line[MAX_LEN];
-    nlines = 0;
-    while (fgets(line, MAX_LEN, stdin)) {
-        len = strlen(line);
-        if (nlines >= MAX_LINES || (p = malloc(len + 1)) == NULL)
-            return -1;
-        else {
-            if (line[len - 1] == '\n')  // dropping the newline at the end...
-                line[len - 1] = '\0';
-            strcpy(p, line);
-            lineptr[nlines++] = p;
+char **lineptr;
+int line_count = 0;
+
+char *strcasestr(const char *haystack, const char *needle) {
+    if (!*needle)
+        return (char *)haystack;
+    for (; *haystack; haystack++) {
+        if (toupper(*haystack) == toupper(*needle)) {
+            const char *h, *n;
+            for (h = haystack, n = needle; *h && *n; h++, n++) {
+                if (toupper(*h) != toupper(*n)) {
+                    break;
+                }
+            }
+            if (!*n)
+                return (char *)haystack;
         }
     }
-    return nlines;
+    return NULL;
 }
 
-void error(int error_code) {
-    switch (error_code) {
-        case 5:
-            printf("find: Illegal usage. -p and -x can't be used together.\n");
-            break;
-        default:
-            printf("find: fatal error - Illegal usage. Error code: %d. Usage: \"%s\"\n",
-                   error_code, "find [-n] [-x] [-s] [-r] [-m] [-c] [-f] [-p] pattern");
+char *strstr_w_option(const char *haystack, const char *needle, int option) {
+    if (option & CASE) {
+        return strcasestr(haystack, needle);
+    } else {
+        return strstr(haystack, needle);
     }
-    exit(error_code);
 }
 
-flags set_flags(int argc, char **argv) {
-    flags option = 0;  // By default, all flags are down!
-    for (int i = 1; i < argc - 1; i++) {
-        if (argv[i][0] != '-')  // if argument doesn't start with -
-            error(2);
-        for (int j = 1; argv[i][j] != '\0'; j++)
-            switch (argv[i][j]) {
-                case 'n':
-                case 'N':
-                    option |= NUMBERED;
-                    break;
-                case 'x':
-                case 'X':
-                    option |= EXCEPT;
-                    break;
-                case 's':
-                case 'S':
-                    option |= SORTED;
-                    break;
-                case 'r':
-                case 'R':
-                    option |= REVERSED;
-                    break;
-                case 'm':
-                case 'M':
-                    option |= MATCHED;
-                    break;
-                case 'c':
-                case 'C':
-                    option |= CASE;
-                    break;
-                case 'f':
-                case 'F':
-                    option |= FIRST;
-                    break;
-                case 'p':
-                case 'P':
-                    option |= PARTIAL;
-                    break;
-                default:
-                    error(3);
-            }
-    }
-    if ((option & PARTIAL) && (option & EXCEPT)) {
-        error(5);
-    }
-    return option;
+int compare(const void *a, const void *b) {
+    return strcmp(*(const char **)a, *(const char **)b);
 }
+
+int reverse_compare(const void *a, const void *b) {
+    return strcmp(*(const char **)b, *(const char **)a);
+}
+
 /*
 * Program find is used to find the occurrences of a given pattern in stdin
 * Assumption is that stdin is made of multiple lines (no more than 1000)
@@ -98,22 +68,83 @@ flags set_flags(int argc, char **argv) {
 ******e.g. if we look for "apple" in "my favorite dessert is apple pie with coffee"
 ****** then the output is "my favorit...apple...offee"
 */
-int main(int argc, char **argv) {
-    if (argc < 2)
-        error(1);
-    char *pattern = strdup(argv[argc - 1]);  // the last CLA is considered to be the pattern
-    flags option = set_flags(argc, argv);
-    if ((option & REVERSED) && (option & SORTED))
-        error(4);  // cannot print the output using both sorted and reversed options...
-    int nlines = readlines();
-    if (option & SORTED)
-        quicksort(lineptr, 0, nlines - 1);
 
-    int start = (option & REVERSED) ? nlines - 1 : 0;
-    int end = (option & REVERSED) ? -1 : nlines;
-    int step = (option & REVERSED) ? -1 : 1;
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: \"find [-n] [-x] [-s] [-r] [-m] [-c] [-f] [-p] pattern\"\n");
+        exit(1);
+    }
+
+    int option = 0;
+    char *pattern = NULL;
+
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-') {
+            switch (argv[i][1]) {
+                case 'n': option |= NUMBERED; break;
+                case 'x': option |= EXCEPT; break;
+                case 's': option |= SORTED; break;
+                case 'r': option |= REVERSE; break;
+                case 'm': option |= MATCH; break;
+                case 'c': option |= CASE; break;
+                case 'f': option |= FIRST; break;
+                case 'p': option |= PARTIAL; break;
+                default: 
+                    fprintf(stderr, "Unknown option: %s\n", argv[i]);
+                    exit(1);
+            }
+        } else {
+            pattern = argv[i];
+        }
+    }
+
+    if (!pattern) {
+        fprintf(stderr, "Pattern not provided.\n");
+        exit(1);
+    }
+
+    if ((option & SORTED) && (option & REVERSE)) {
+        fprintf(stderr, "find: Illegal usage. -s and -r can't be used together.\n");
+        exit(4);
+    }
+
+    if ((option & EXCEPT) && (option & FIRST)) {
+        fprintf(stderr, "find: Illegal usage. -f and -x can't be used together.\n");
+        exit(4);
+    }
+
+    if ((option & EXCEPT) && (option & PARTIAL)) {
+        fprintf(stderr, "find: Illegal usage. -p and -x can't be used together.\n");
+        exit(4);
+    }
+
+    size_t len = 0;
+    ssize_t read;
+    char *line = NULL;
+    lineptr = malloc(sizeof(char *) * 1000);
+
+    while ((read = getline(&line, &len, stdin)) != -1) {
+        line[strcspn(line, "\n")] = 0;
+        lineptr[line_count++] = strdup(line);
+    }
+
+    free(line);
+
+    if (option & SORTED) {
+        qsort(lineptr, line_count, sizeof(char *), compare);
+    } else if (option & REVERSE) {
+        qsort(lineptr, line_count, sizeof(char *), reverse_compare);
+    }
+
+    int start = 0, end = line_count, step = 1;
+    if (option & REVERSE) {
+        start = line_count - 1;
+        end = -1;
+        step = -1;
+    }
 
     char initial[10] = "";
+
     for (int i = start; i != end; i += step) {
         if (option & NUMBERED)
             sprintf(initial, "%d. ", i + 1);
@@ -128,10 +159,13 @@ int main(int argc, char **argv) {
                 }
                 printf("%s", pattern);
                 if (strlen(lineptr[i]) - index - strlen(pattern) > 5) {
-                    printf("...%.5s", lineptr[i] + strlen(lineptr[i]) - 5);
+                    printf("...%.5s\n", lineptr[i] + strlen(lineptr[i]) - 5);
                 } else {
-                    printf("%s", first_occurrence + strlen(pattern));
+                    printf("%s\n", first_occurrence + strlen(pattern));
                 }
+            } else if (option & FIRST) {
+                int index = first_occurrence - lineptr[i];
+                printf("@%d: %s\n", index + 1, lineptr[i]);
             } else {
                 printf("%s%s\n", initial, lineptr[i]);
             }
