@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 #define NUMBERED 0x01
 #define EXCEPT   0x02
@@ -34,7 +35,7 @@ char *strcasestr(const char *haystack, const char *needle) {
     return NULL;
 }
 
-static char *strstr_fully_matched(const char *haystack, const char *needle) {
+static char *strstr_fully_matched(char *haystack, char *needle) {
     char *rv;
     char padded_needle[strlen(needle) + 3];
     padded_needle[0] = ' ';
@@ -42,9 +43,9 @@ static char *strstr_fully_matched(const char *haystack, const char *needle) {
     padded_needle[strlen(needle) + 1] = ' ';
     padded_needle[strlen(needle) + 2] = '\0'; // pad the needle w/ spaces before and after
     if(!strcmp(needle, haystack))
-        return (char *)haystack; // needle matches the whole haystack
+        return haystack; // needle matches the whole haystack
     if (!strncmp(haystack, padded_needle + 1, strlen(needle) + 1)) {
-        return (char *)haystack; // needle is at the beginning of haystack
+        return haystack; // needle is at the beginning of haystack
     }
     if ((rv = strstr(haystack, padded_needle)) != NULL) {
         return rv + 1; // needle is at the middle of haystack.
