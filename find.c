@@ -35,6 +35,9 @@ char *strcasestr(const char *haystack, const char *needle) {
 }
 
 char *strstr_w_option(const char *haystack, const char *needle, flags option) {
+    if (option & MATCH) {
+        return strstr_fully_matched(haystack, needle);
+    }
     if (option & CASE) {
         return strcasestr(haystack, needle);
     } else {
@@ -130,26 +133,29 @@ int main(int argc, char **argv) {
         if (option & NUMBERED)
             sprintf(initial, "%d. ", i + 1);
         char *first_occurrence = strstr_w_option(lineptr[i], pattern, option);
-        if (((option & EXCEPT) != 0) != (first_occurrence != NULL)) {
-            if (option & PARTIAL) {
-                int index = first_occurrence - lineptr[i];
-                if (index > 10) {
-                    printf("%.10s...", lineptr[i]);
-                } else {
-                    printf("%.*s", index, lineptr[i]);
-                }
-                printf("%s", pattern);
-                if (strlen(lineptr[i]) - index - strlen(pattern) > 5) {
-                    printf("...%.5s\n", lineptr[i] + strlen(lineptr[i]) - 5);
-                } else {
-                    printf("%s\n", first_occurrence + strlen(pattern));
-                }
-            } else if (option & FIRST) {
-                int index = first_occurrence - lineptr[i];
-                printf("@%d: %s\n", index + 1, lineptr[i]);
+        if ((option & EXCEPT) && !first_occurrence) {
+            printf("%s%s\n", initial, lineptr[i]);
+        } else if (!first_occurrence) {
+            continue;
+        }
+        if (option & PARTIAL) {
+            int index = first_occurrence - lineptr[i];
+            if (index > 10) {
+                printf("%.10s...", lineptr[i]);
             } else {
-                printf("%s%s\n", initial, lineptr[i]);
+                printf("%.*s", index, lineptr[i]);
             }
+            printf("%s", pattern);
+            if (strlen(lineptr[i]) - index - strlen(pattern) > 5) {
+                printf("...%.5s\n", lineptr[i] + index + strlen(pattern));
+            } else {
+                printf("%s\n", first_occurrence + strlen(pattern));
+            }
+        } else if (option & FIRST) {
+            int index = first_occurrence - lineptr[i];
+            printf("@%d: %s\n", index + 1, lineptr[i]);
+        } else {
+            printf("%s%s\n", initial, lineptr[i]);
         }
     }
     return 0;
