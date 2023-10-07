@@ -50,25 +50,6 @@ int reverse_compare(const void *a, const void *b) {
     return strcmp(*(const char **)b, *(const char **)a);
 }
 
-/*
-* Program find is used to find the occurrences of a given pattern in stdin
-* Assumption is that stdin is made of multiple lines (no more than 1000)
-* Program tries finding the pattern in each line.
-* The pattern is given to the program as the last command-line argument
-* There are multiple options for running this program, all passed in CLAs
-* Usage: find [-n] [-x] [-s] [-r] [-m] [-c] [-f] [-p] pattern
-* -n: prints the line number in the output
-* -x: prints out the lines that don't have the pattern
-* -s: prints out the lines in alphabetical order
-* -r: prints out the lines in reverse order (LIFO)
-* -m: finds the pattern only if it matches a whole word in stdin
-* -c ignore the case when finding the pattern string
-* -f: prints out the index of first occurrence of pattern found in each line
-* -p: partially prints out the input lines. Uses ellipsis to shorten lines.
-******e.g. if we look for "apple" in "my favorite dessert is apple pie with coffee"
-****** then the output is "my favorit...apple...offee"
-*/
-
 int main(int argc, char **argv) {
     if (argc < 2) {
         fprintf(stderr, "Usage: \"find [-n] [-x] [-s] [-r] [-m] [-c] [-f] [-p] pattern\"\n");
